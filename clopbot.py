@@ -2,6 +2,8 @@ import time #for sleeping
 import praw #for reddit api
 import json #for parsing repsonses from various websites
 import urllib #for stuff
+from urllib.request import urlopen #to open urls
+from urllib.parse import quote #see above
 import requests #for getting APIs
 import base64 #for imgur upload
 import sys #for file stuff
@@ -12,13 +14,13 @@ from time import gmtime, strftime #for debug output
 
 error_wait_time = 60*1 #time before retry on error
 
-subredd = sys.argv[1] #get subbreddit name from command line
-#usernme = sys.argv[2] #get username from command line
-#passwrd = sys.argv[3] #get password from command line
-usernme = "BOT USERNAME HERE"
-passwrd = "BOT PASSWORD HERE"
+subredd = sys.argv[1] #get subbreddit name
+#usernme = sys.argv[2] #get username
+#passwrd = sys.argv[3] #get password
+usernme = "clopbot"
+passwrd = "clopalldayclopallnight"
 try:
-  debugen = sys.argv[4] #get debug, if enabled (disables checking comments)
+  debugen = sys.argv[2] #get debug, if enabled (disables checking comments)
 except:
   debugen = False
 
@@ -60,7 +62,8 @@ def save_done(): #save completed items into a file
 
 def load_done(): #load completed items into list
   try:
-    save_file = open(subredd+'_completed.txt', 'r').read()
+    with open(subredd+'_completed.txt', 'r') as f:
+        save_file = f.read()
     save_file = save_file.split(';')
 
     for save in save_file:
@@ -85,10 +88,12 @@ def post_comment(submission, url, extra=''): #post the comment
       print_out("error posting comment, wating to retry", submission)
       time.sleep(error_wait_time)
 
-def upload_to_imgur(image, submission): #upload a file to imgur
-  api_endpoint = 'https://api.imgur.com/3/upload.json'
-  headers = {'Authorization': 'Client-ID CLIENT ID GOES HERE'}
-  #needs an imgur api key
+
+def upload_to_imgur(image, submission, album=''): #upload a file to imgur
+  api_endpoint = 'https://api.imgur.com/3/image'
+  headers = {'Authorization': 'Client-ID fa86aa42dc73fa2', 'Connection': 'close'} #needs an imgur api key
+
+  print_out("uploading to imgur")
 
   success = False
   while not success:
@@ -104,12 +109,28 @@ def upload_to_imgur(image, submission): #upload a file to imgur
   success = False
   while not success:
     try:
-      r = requests.post(api_endpoint, data={'image': image}, headers=headers, verify=False)
+      r = requests.post(api_endpoint, data={'image': image, 'album': album}, headers=headers, verify=False)
       success = True
     except:
       print_out("error POSTing data to imgur, waiting to retry", submission)
       time.sleep(error_wait_time)
 
+  return r.text
+
+def create_album(submission):
+  api_endpoint = "https://api.imgur.com/3/album"
+  headers = {'Authorization': 'Client-ID fa86aa42dc73fa2', 'Connection': 'close'}
+
+  print_out("uploading to album")
+
+  success = False
+  while not success:
+    try:
+      r = requests.post(api_endpoint, headers=headers, verify=False)
+      success = True
+    except:
+      print_out("error POSTing data to imgur album, waiting to retry", submission)
+      time.sleep(error_wait_time)
   return r.text
 
 def upload_and_comment(url, submission, extra=''): #download an image, then upload to imgur and comment it
@@ -175,13 +196,13 @@ def handle_da(url, submission): #handle da
   success = False
   while not success:
     try:
-      data = urllib.urlopen("http://backend.deviantart.com/oembed?url=" + urllib.quote(submission.url))
+      data = urlopen("http://backend.deviantart.com/oembed?url=" + quote(submission.url))
       success = True
     except:
       print_out("error reading da API, waiting to retry", submission)
       time.sleep(error_wait_time)
 
-  data = json.loads(data.read())
+  data = json.loads(data.read().decode("utf-8"))
   upload_and_comment(data['url'], submission)
 
 def handle_tumblr(url, submission): #handle tumblr
@@ -191,8 +212,9 @@ def handle_tumblr(url, submission): #handle tumblr
   temp = blog_name.split("/")
   blog_name = temp[0]
   post_id = temp[2]
+  album = []
 
-  api_url = "http://api.tumblr.com/v2/blog/%s/posts/photo?id=%s&api_key=API KEY HERE" % (blog_name, post_id)
+  api_url = "http://api.tumblr.com/v2/blog/%s/posts/photo?id=%s&api_key=2lTLiwp6Px0fmLRyTe7kbcFWMBsj92lo2YAAtZggm71XDVYxmC" % (blog_name, post_id)
 
   success = False
   while not success:
@@ -203,8 +225,16 @@ def handle_tumblr(url, submission): #handle tumblr
     except:
       print_out("error loading tumblr, waiting to retry", submission)
       time.sleep(error_wait_time)
-
-  upload_and_comment(r['response']['posts'][0]['photos'][0]['alt_sizes'][0]['url'], submission)
+  for l in range(len(r["response"]["posts"][0]["photos"])):
+    album.append(r['response']['posts'][0]['photos'][l]['alt_sizes'][0]['url'])  
+  if len(album) == 1:
+    upload_and_comment(album[0], submission)
+  else:
+    new_album = json.loads(create_album(submission))
+    for x in range(len(album)):
+      upload_to_imgur(album[x], submission, new_album['data']['deletehash'])
+    url = {'data': {'link': "http://imgur.com/a/" + new_album['data']['id']}}
+    post_comment(submission, url)
 
 def test_type(url, submission): #check if a site is an image
   print_out("checking if image", submission)
@@ -329,6 +359,8 @@ def runthread(submission): #basically what calls everything
       handle_inkbunny(submission.url, submission)
     elif "derpibooru" in submission.domain:
       handle_derpi(submission.url, submission)
+    elif "deviantart" in submission.domain:
+      handle_da(submission.url,submission)
     elif not submission.domain == "imgur.com":
       if not submission.domain == "i.imgur.com":
         test_type(submission.url, submission)
@@ -354,3 +386,4 @@ while True: #run thread
   except:
     print_out("error doing something, waiting to retry")
     time.sleep(error_wait_time)
+
