@@ -18,7 +18,7 @@ subredd = sys.argv[1] #get subbreddit name
 #usernme = sys.argv[2] #get username
 #passwrd = sys.argv[3] #get password
 usernme = "clopbot"
-passwrd = "clopalldayclopallnight"
+passwrd = "PASSWD"
 try:
   debugen = sys.argv[2] #get debug, if enabled (disables checking comments)
 except:
@@ -91,7 +91,7 @@ def post_comment(submission, url, extra=''): #post the comment
 
 def upload_to_imgur(image, submission, album=''): #upload a file to imgur
   api_endpoint = 'https://api.imgur.com/3/image'
-  headers = {'Authorization': 'Client-ID fa86aa42dc73fa2', 'Connection': 'close'} #needs an imgur api key
+  headers = {'Authorization': 'Client-ID CLIENT ID HERE', 'Connection': 'close'} #needs an imgur api key
 
   print_out("uploading to imgur")
 
@@ -119,7 +119,7 @@ def upload_to_imgur(image, submission, album=''): #upload a file to imgur
 
 def create_album(submission):
   api_endpoint = "https://api.imgur.com/3/album"
-  headers = {'Authorization': 'Client-ID fa86aa42dc73fa2', 'Connection': 'close'}
+  headers = {'Authorization': 'Client-ID CLIENT ID HERE', 'Connection': 'close'}
 
   print_out("uploading to album")
 
@@ -214,7 +214,7 @@ def handle_tumblr(url, submission): #handle tumblr
   post_id = temp[2]
   album = []
 
-  api_url = "http://api.tumblr.com/v2/blog/%s/posts/photo?id=%s&api_key=2lTLiwp6Px0fmLRyTe7kbcFWMBsj92lo2YAAtZggm71XDVYxmC" % (blog_name, post_id)
+  api_url = "http://api.tumblr.com/v2/blog/%s/posts/photo?id=%s&api_key=API_KEY" % (blog_name, post_id)
 
   success = False
   while not success:
