@@ -1,3 +1,7 @@
+PUBLIC SERVICE ANNOUNCEMENT (READ THIS)
+======
+<h3>Before you dive into this mess, take a look at <a href="https://github.com/Syfaro/Mirror-Bot">this bot</a>. I've change over to it's framework because it's much more object-oriented and modular. Please don't use the code above. Use the new, better stuff. Thank you for your time.</h3>
+
 clopbot
 =======
 
